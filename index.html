@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<meta name="theme-color" content="#0b0c10">
+<title>Power Compare — генератор сравнений</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;touch-action:manipulation;background:#0b0c10;color:#e8e8ee;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overflow:hidden}
+button,input,textarea,select{font:inherit;color:inherit}
+#app{display:flex;height:100%}
+/* ---------- panel ---------- */
+#panel{width:340px;min-width:300px;background:#14151b;border-right:1px solid #262833;display:flex;flex-direction:column}
+#panel header{padding:14px 16px;border-bottom:1px solid #262833}
+#panel h1{font-size:16px;letter-spacing:.04em}
+#panel h1 span{color:#ff3b47}
+.hint{font-size:12px;color:#8a8c9a;margin-top:4px;line-height:1.4}
+#list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.item{background:#1c1e27;border:1px solid #2b2e3b;border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:7px}
+.item.drag{opacity:.4}.item.over{border-color:#ff3b47}
+.row{display:flex;gap:7px;align-items:center}
+.item .num{width:22px;height:22px;border-radius:50%;background:#ff3b47;color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;flex:none;cursor:grab}
+.item input[type=text],.item input[type=number],.item textarea{width:100%;background:#0f1015;border:1px solid #2b2e3b;border-radius:7px;padding:7px 9px;font-size:13px;outline:none}
+.item input:focus,.item textarea:focus{border-color:#ff3b47}
+.item textarea{resize:vertical;min-height:50px}
+.item input[type=number]{width:84px;flex:none}
+.thumb{width:54px;height:54px;border-radius:8px;background:#0f1015 center/cover;border:1px dashed #3a3d4d;flex:none;cursor:pointer}
+.btn{background:#262a38;border:1px solid #333749;border-radius:7px;padding:6px 9px;font-size:12px;cursor:pointer}
+.btn:hover{background:#30354a}
+.btn.red{background:#ff3b47;border-color:#ff3b47;color:#fff;font-weight:700}
+.btn.red:hover{background:#ff5560}
+.mini{padding:4px 7px;font-size:12px;line-height:1}
+.sp{flex:1}
+#panel footer{padding:12px;border-top:1px solid #262833;display:flex;flex-direction:column;gap:8px}
+#panel footer .btn.red{padding:11px;font-size:14px}
+label.chk{display:flex;gap:8px;align-items:center;font-size:12.5px;color:#b8bacb;cursor:pointer}
+select.sel{width:100%;background:#0f1015;border:1px solid #2b2e3b;border-radius:7px;padding:7px 9px;font-size:13px;outline:none;color:#e8e8ee}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#8a8c9a}
+.field input{background:#0f1015;border:1px solid #2b2e3b;border-radius:7px;padding:7px 9px;font-size:14px;font-weight:700;outline:none;color:#fff;width:100%}
+.field input:focus{border-color:#ff3b47}
+/* ---------- right side ---------- */
+#right{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;background:#07080b}
+#view{flex:1;min-height:0;display:grid;place-items:center;position:relative;overflow:hidden;padding:14px}
+#frame{position:relative;overflow:hidden;background:#000;box-shadow:0 10px 50px #000a;flex:none}
+/* ---------- stage (design space: 1080 on the short side) ---------- */
+#stage{--a1:#ff3b47;--a2:#c4121e;--a3:#e3202c;--bg1:#2a2a30;--bg2:#0d0d10;--bot:#2a2a2e;--bot2:#1d1d21;--cw:388px;--ch:1080px;--fx:260px;--fy:0px;--rot:rotateY(-62deg);position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0;overflow:hidden;background:#000;font-family:"Arial Black","Impact",system-ui,sans-serif}
+#belt{position:absolute;left:0;top:0;display:flex;will-change:transform;height:100%}
+.card{width:var(--cw);height:var(--ch);flex:none;border-right:8px solid #000;display:flex;flex-direction:column;background:#101012;position:relative;overflow:hidden}
+.top{height:270px;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,var(--bg1),var(--bg2) 70%);flex:none}
+.hex{width:340px;height:208px;background:var(--a3);filter:drop-shadow(0 0 22px var(--a1));clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);display:grid;place-items:center;position:relative}
+.hex::before{content:"";position:absolute;inset:7px;background:linear-gradient(180deg,var(--a1),var(--a2));clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%)}
+.hex b{position:relative;color:#fff;font-size:56px;line-height:1;text-align:center;text-shadow:0 3px 0 #0006;letter-spacing:.01em}
+.hex b small{display:block;font-size:28px;letter-spacing:.2em;opacity:.92;margin-bottom:5px}
+.name{height:150px;flex:none;background:#fff;color:#000;display:grid;place-items:center;text-align:center;padding:0 14px;font-size:56px;font-weight:900;line-height:1.02;text-transform:uppercase;overflow:hidden;border-top:6px solid #000;border-bottom:6px solid #000}
+.bottom{flex:1;background:linear-gradient(180deg,var(--bot),var(--bot2));display:flex;flex-direction:column;align-items:center;padding:24px 22px 26px;gap:22px;min-height:0}
+.desc{color:#fff;font-size:42px;line-height:1.18;text-align:center;font-family:system-ui,"Segoe UI",Arial,sans-serif;font-weight:800;max-height:290px;overflow:hidden;width:100%;flex:none;text-shadow:0 2px 0 #0007}
+.pic{flex:1;width:100%;min-height:190px;border-radius:18px;background:#1a1a1d center/cover no-repeat;box-shadow:0 0 0 4px #000}
+/* vertical (Shorts 9:16) layout: every card is a row */
+#stage.vert{--cw:1080px;--ch:640px;--fx:0px;--fy:300px;--rot:rotateX(62deg)}
+#stage.vert #belt{flex-direction:column;height:auto;width:100%}
+#stage.vert .card{display:grid;grid-template-columns:612px 1fr;grid-template-rows:auto auto 1fr;border-right:0;border-bottom:8px solid #000;background:linear-gradient(180deg,var(--bot),var(--bot2))}
+#stage.vert .top{grid-area:1/1;height:226px;padding-top:6px}
+#stage.vert .hex{width:330px;height:200px}
+#stage.vert .hex b{font-size:56px}
+#stage.vert .name{grid-area:2/1;height:152px;font-size:64px;border-top:6px solid #000}
+#stage.vert .bottom{display:contents}
+#stage.vert .desc{grid-area:3/1;font-size:46px;max-height:none;min-height:0;padding:18px 26px 12px;display:flex;align-items:center;justify-content:center}
+#stage.vert .pic{grid-area:1/2/4/3;margin:24px 24px 24px 6px;width:auto;height:auto;min-height:0;border-radius:22px}
+#counter{position:absolute;right:44px;bottom:34px;text-align:right;color:#fff;line-height:.9;pointer-events:none}
+#counter small{display:block;font-size:38px;letter-spacing:.35em;margin-bottom:6px;color:var(--a1);-webkit-text-stroke:2px #000;paint-order:stroke fill}
+#counter b{font-size:200px;-webkit-text-stroke:10px #000;paint-order:stroke fill;font-variant-numeric:tabular-nums}
+#stage.vert #counter{right:34px;bottom:26px}
+#stage.vert #counter b{font-size:150px}
+#stage.vert #counter small{font-size:30px}
+#counter.off{display:none}
+/* ---------- card transition animation ---------- */
+.card.pre{opacity:0;pointer-events:none}
+.card.in{animation:cardIn .95s cubic-bezier(.16,.9,.24,1.06) both}
+.card.in::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.55) 50%,transparent 68%);transform:translateX(-130%);animation:sweep .85s ease-out .12s both;pointer-events:none;z-index:3}
+.card.in .hex{animation:hexpop .9s cubic-bezier(.2,1.6,.4,1) .12s both}
+.card.in .name{animation:wipe .5s cubic-bezier(.2,.8,.2,1) .28s both}
+.card.in .desc{animation:rise .6s ease-out .5s both}
+.card.in .pic{animation:picpop .85s cubic-bezier(.2,1.4,.4,1) .34s both}
+@keyframes cardIn{0%{opacity:0;transform:perspective(1200px) translate(var(--fx),var(--fy)) var(--rot) scale(.72);filter:brightness(2.6) blur(8px)}55%{opacity:1;transform:perspective(1200px) translate(0,0) scale(1.035);filter:brightness(1.5) blur(0)}100%{opacity:1;transform:none;filter:none}}
+@keyframes sweep{to{transform:translateX(130%)}}
+@keyframes hexpop{0%{transform:scale(0) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
+@keyframes wipe{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@keyframes rise{0%{opacity:0;transform:translateY(26px)}100%{opacity:1;transform:none}}
+@keyframes picpop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+#vig{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,#0009,transparent 8%,transparent 92%,#0009)}
+#stage.vert #vig{background:linear-gradient(180deg,#0008,transparent 6%,transparent 94%,#0008)}
+/* ---------- control bar ---------- */
+#bar{display:flex;align-items:center;gap:14px;padding:12px 16px;background:#14151b;border-top:1px solid #262833;transition:opacity .3s}
+#play{min-width:130px;padding:12px 26px;font-size:18px;font-weight:900;letter-spacing:.12em;background:#ff3b47;border:none;border-radius:10px;cursor:pointer;color:#fff}
+#play:hover{background:#ff5560}
+#scrub{flex:1;accent-color:#ff3b47}
+.spd{display:flex;align-items:center;gap:8px;font-size:13px;color:#b8bacb;white-space:nowrap}
+.spd input{width:150px;accent-color:#ff3b47}
+.spd output{width:42px;color:#fff;font-weight:700}
+#right:fullscreen{background:#000}
+#right:fullscreen #view{padding:0}
+#right:fullscreen #bar{position:absolute;left:0;right:0;bottom:0;background:#000b}
+#right.idle #bar{opacity:0}
+#right.idle{cursor:none}
+#hint{position:absolute;left:50%;top:18px;transform:translateX(-50%);background:#000c;color:#fff;font:600 15px system-ui,sans-serif;padding:10px 16px;border-radius:30px;opacity:0;transition:opacity .4s;pointer-events:none;z-index:5;white-space:nowrap}
+#hint.show{opacity:1}
+/* clean mode: while the video plays there is no UI at all */
+body.clean{overflow:hidden;cursor:none;overscroll-behavior:none;position:fixed;inset:0;width:100%}
+body.clean #panel,body.clean #bar{display:none}
+body.clean #right{position:fixed;inset:0;z-index:50;background:#000;height:100vh;height:100dvh}
+body.clean #view{padding:0;height:100%;flex:1}
+body.clean #frame{box-shadow:none}
+/* ---------- NEW: save row ---------- */
+.saverow{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.saverow .btn.red{padding:9px 14px;font-size:14px;flex:none}
+#saveStat{font-size:12px;color:#8a8c9a;line-height:1.3;flex:1;min-width:120px}
+#saveStat.ok{color:#5dff7a}#saveStat.dirty{color:#ffd24a}#saveStat.err{color:#ff6b75}
+/* ---------- NEW: license lock screen ---------- */
+#lock{display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:20px;background:radial-gradient(circle at 50% 30%,#1a1c26,#07080b 70%);overflow:auto}
+body.locked #lock{display:flex}
+body.locked #app{display:none}
+#lockForm{width:100%;max-width:380px;background:#14151b;border:1px solid #262833;border-radius:16px;padding:28px 24px;display:flex;flex-direction:column;gap:14px;text-align:center;box-shadow:0 20px 60px #000a}
+.lockLogo{font-size:22px;font-weight:900;letter-spacing:.06em}.lockLogo span{color:#ff3b47}
+#lockForm p{font-size:13.5px;color:#8a8c9a;line-height:1.45}
+#keyInput{width:100%;background:#0f1015;border:1px solid #2b2e3b;border-radius:10px;padding:14px;font-size:18px;font-weight:700;letter-spacing:.1em;text-align:center;text-transform:uppercase;outline:none;color:#fff}
+#keyInput:focus{border-color:#ff3b47}
+#keyBtn{padding:14px;font-size:16px;font-weight:800;letter-spacing:.08em}
+#keyBtn:disabled{opacity:.55;cursor:wait}
+#keyMsg{min-height:20px;font-size:13.5px;font-weight:600;line-height:1.4}
+#keyMsg.err{color:#ff6b75}#keyMsg.ok{color:#5dff7a}
+#lockForm small{font-size:11.5px;color:#6b6e7d;line-height:1.4}
+/* phone / small screens: preview on top (sticky), editor below, whole page scrolls */
+@media(max-width:820px){
+  html,body{overflow:auto;height:auto;-webkit-overflow-scrolling:touch}
+  #app{display:flex;flex-direction:column;height:auto;min-height:100vh;min-height:100dvh}
+  #right{position:sticky;top:0;z-index:20;order:-1;padding-top:env(safe-area-inset-top)}
+  #view{flex:none;height:calc((100vw - 16px) * 0.5625 + 16px);padding:8px}
+  body.vert-mode #view{height:min(58vh,calc((100vw - 16px) * 1.7778 + 16px));height:min(58dvh,calc((100vw - 16px) * 1.7778 + 16px))}
+  #bar{flex-wrap:wrap;gap:8px 10px;padding:10px 12px}
+  #play{min-width:0;flex:1;padding:14px 10px;font-size:18px}
+  #full{display:none}
+  #scrub{order:3;flex:1 1 100%;height:28px}
+  .spd{order:2;flex:1 1 55%}.spd input{flex:1;width:auto}
+  #panel{width:100%;min-width:0;border-right:0;display:block;padding-bottom:calc(36px + env(safe-area-inset-bottom))}
+  #list{overflow:visible;padding:12px}
+  #panel footer{border-top:0;padding:4px 12px 12px}
+  .item input[type=text],.item input[type=number],.item textarea,.field input,select.sel{font-size:16px;padding:10px 11px}
+  .item input[type=number]{width:96px}
+  .btn{padding:11px 14px;font-size:14px;min-height:42px}
+  .mini{padding:10px 14px;font-size:16px}
+  .thumb{width:68px;height:68px}
+  .item .num{width:30px;height:30px;font-size:14px;cursor:default}
+  #panel footer .btn.red{padding:15px;font-size:16px}
+  label.chk{font-size:14px;padding:6px 0}
+  label.chk input{width:20px;height:20px}
+  .saverow .btn.red{padding:12px 16px;font-size:15px}
+}
+</style>
+</head>
+<body class="locked">
+
+<!-- ============ ЭКРАН БЛОКИРОВКИ: виден, пока нет действующего ключа ============ -->
+<div id="lock">
+  <form id="lockForm" autocomplete="off">
+    <div class="lockLogo">POWER <span>COMPARE</span></div>
+    <p>Введите лицензионный ключ, чтобы открыть инструмент.</p>
+    <input id="keyInput" type="text" placeholder="PC-XXXX-XXXX-XXXX" autocapitalize="characters" autocorrect="off" autocomplete="off" spellcheck="false" maxlength="64">
+    <button id="keyBtn" class="btn red" type="submit">Войти</button>
+    <div id="keyMsg" role="alert"></div>
+    <small>Ключ активируется один раз и запоминается в этом браузере — повторно вводить его не придётся.</small>
+  </form>
+</div>
+
+<div id="app">
+  <aside id="panel">
+    <header>
+      <h1>POWER <span>COMPARE</span></h1>
+      <div class="hint">Добавляй карточки, ставь Power, загружай фото. Порядок меняется перетаскиванием кружка с номером. Первая карточка держится несколько секунд, дальше карточки выезжают по одной. Всё сохраняется автоматически, а кнопка «Сохранить» делает это сразу.</div>
+      <div class="saverow"><button class="btn red" id="saveBtn" title="Сохранить сейчас (Ctrl/Cmd+S)">💾 Сохранить</button><span id="saveStat"></span></div>
+    </header>
+    <div style="padding:12px 12px 0;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <label class="field">Надпись вместо POWER<input id="label" type="text" maxlength="14" value="POWER"></label>
+      <label class="field">Стиль<select class="sel" id="theme"></select></label>
+      <label class="field" style="grid-column:1/-1">Формат видео<select class="sel" id="fmt"><option value="h">Горизонтальный 16:9</option><option value="v">Shorts 9:16 (вертикальный, текст ровно)</option></select></label>
+    </div>
+    <div id="list"></div>
+    <footer>
+      <button class="btn red" id="add">+ Добавить карточку</button>
+      <div class="row">
+        <button class="btn" id="sortAsc" title="Слабые первыми, сильные в конце — растёт интрига">Сортировать ↑ Power</button>
+        <button class="btn" id="reset">Сброс</button>
+      </div>
+      <label class="field">Пауза на первой карточке, сек<input id="hold" type="number" min="0.5" max="10" step="0.5" value="3"></label>
+      <label class="chk"><input type="checkbox" id="optCounter" checked> Счётчик Power справа внизу</label>
+      <label class="chk"><input type="checkbox" id="optSound" checked> Звук на каждой карточке</label>
+      <label class="chk"><input type="checkbox" id="optRot"> Повернуть кадр на 90° (только горизонтальный формат, заполняет экран вертикально)</label>
+    </footer>
+  </aside>
+  <main id="right">
+    <div id="hint"></div>
+    <div id="view">
+      <div id="frame">
+        <div id="stage">
+          <div id="belt"></div>
+          <div id="vig"></div>
+          <div id="counter"><small id="clabel">POWER</small><b id="cnum">0</b></div>
+        </div>
+      </div>
+    </div>
+    <div id="bar">
+      <button id="play">▶ PLAY</button>
+      <input type="range" id="scrub" min="0" max="1000" value="0" title="Перемотка">
+      <div class="spd">Скорость <input type="range" id="speed" min="0.1" max="2" step="0.1" value="1"><output id="speedOut">1.0x</output></div>
+      <button class="btn" id="full" title="Полный экран — удобно для записи видео">⛶ На весь экран</button>
+    </div>
+  </main>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+/* ==========================================================================================
+   КАК НАСТРОИТЬ FIREBASE (один раз, около 5 минут)
+
+   1. Откройте https://console.firebase.google.com → «Создать проект» (Google Analytics можно выключить).
+   2. Слева «Сборка → Firestore Database» → «Создать базу данных». Выберите регион (например eur3)
+      и режим «Рабочий» (production).
+   3. На главной странице проекта нажмите значок «</>» (Веб-приложение), придумайте имя, нажмите «Зарегистрировать».
+      Скопируйте объект firebaseConfig и вставьте значения в FIREBASE_CONFIG ниже.
+      (Эти значения не секретные. Защиту обеспечивают правила из шага 5.)
+   4. Firestore → «Начать коллекцию» → ID коллекции: license_keys.
+      Первый документ: «Идентификатор документа» = сам ключ, ЗАГЛАВНЫМИ буквами и без пробелов,
+      например PC-7F3K-92QD-XL8M.  Поле:  used   тип boolean   значение false.
+      Повторите для каждого ключа. (Только A-Z, 0-9, «-» и «_», длина 3-64 символа.)
+      ВАЖНО: делайте ключи длинными и случайными. Ключи вроде KEY-001, KEY-002 можно просто перебрать.
+   5. Firestore → вкладка «Правила» → замените всё на правила ниже → «Опубликовать»:
+
+        rules_version = '2';
+        service cloud.firestore {
+          match /databases/{database}/documents {
+            match /license_keys/{keyId} {
+              allow get: if true;       // можно прочитать ОДИН ключ по точному ID...
+              allow list: if false;     // ...но нельзя получить список всех ключей
+              allow create, delete: if false;
+              // активировать можно только неиспользованный ключ: used false -> true (и отметка времени)
+              allow update: if resource.data.used == false
+                            && request.resource.data.used == true
+                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used', 'usedAt']);
+            }
+          }
+        }
+
+   6. Выложите файл на хостинг (GitHub Pages, Netlify и т.д.). Готово.
+
+   КАК ЭТО РАБОТАЕТ: ключ проверяется и помечается used:true одной атомарной транзакцией, поэтому два человека
+   не смогут активировать один и тот же ключ одновременно. После успеха доступ запоминается в localStorage
+   (и дублируется в IndexedDB), поэтому при обновлении страницы вводить ключ не нужно, и сайт открывается
+   даже без интернета.
+
+   КАК ПРОВЕРИТЬ ЗАНОВО (для вас, владельца): в консоли браузера выполните
+        localStorage.removeItem('pc_license_v1'); indexedDB.deleteDatabase('powerCompare'); location.reload();
+   и в Firestore верните у ключа used = false.
+
+   ЧЕСТНО ПРО ЗАЩИТУ: это защита уровня «замок на двери». Код страницы виден в браузере, и опытный человек
+   может его обойти. От обычных пользователей, пересылки ссылки и подбора ключей она защищает (при длинных
+   случайных ключах). Если инструмент должен быть защищён «намертво», его серверную часть нужно хранить
+   на сервере (Firebase Functions и т.п.).
+   ========================================================================================== */
+
+/* ---------- сохранение данных: IndexedDB (большой объём, переживает перезагрузки) + запасной localStorage ---------- */
+const Persist = (() => {
+  const DB = 'powerCompare', STORE = 'kv'; let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error('IndexedDB недоступен'));
+    const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore(STORE); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); r.onblocked = () => rej(new Error('база заблокирована'));
+  }));
+  return {
+    async get(k) { const db = await open(); return new Promise((res, rej) => { const q = db.transaction(STORE).objectStore(STORE).get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+    async set(k, v) { const db = await open(); return new Promise((res, rej) => { const tx = db.transaction(STORE, 'readwrite'); tx.objectStore(STORE).put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('запись отменена')); }); },
+  };
+})();
+const OLD_KEY = 'powerCompareV1', LS_STATE = 'powerCompareV2';
+function migrateOld() {   // переносим данные из старой версии (localStorage), чтобы ничего не потерять
+  try {
+    const raw = localStorage.getItem(OLD_KEY); if (!raw) return null; const c = JSON.parse(raw); if (!Array.isArray(c) || !c.length) return null;
+    const h = parseFloat(localStorage.getItem(OLD_KEY + 'H')), m = localStorage.getItem(OLD_KEY + 'M');
+    return { v: 2, cards: c, settings: { label: localStorage.getItem(OLD_KEY + 'L') || 'POWER', theme: localStorage.getItem(OLD_KEY + 'T') || undefined, vert: m ? m === 'v' : undefined, hold: h >= .5 ? h : undefined, rot: !!localStorage.getItem(OLD_KEY + 'R') } };
+  } catch (e) { return null; }
+}
+async function loadSaved() {
+  let state = null, error = null;
+  try { state = await Persist.get('state'); } catch (e) { error = e; }
+  if (!state) { try { const s = localStorage.getItem(LS_STATE); if (s) state = JSON.parse(s); } catch (e) {} }
+  if (!state) state = migrateOld();
+  if (state) error = null; return { state, error };
+}
+async function saveState(snap) {
+  try { await Persist.set('state', snap); }
+  catch (e1) { try { localStorage.setItem(LS_STATE, JSON.stringify(snap)); } catch (e2) { throw e2 && e2.name === 'QuotaExceededError' ? e2 : new Error((e1 && e1.message) || String(e1)); } }
+}
+const niceErr = e => e && e.name === 'QuotaExceededError' ? 'в браузере не хватает места (слишком много или слишком тяжёлые фото)' : (e && e.message) || String(e);
+
+/* ================================== ЛИЦЕНЗИОННЫЙ ЗАМОК ================================== */
+(function gate() {
+  // ↓↓↓ ВСТАВЬТЕ СЮДА ВАШ firebaseConfig (шаг 3 инструкции выше) ↓↓↓
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyBI_WnFDQbgwzXqOKxg2et5GXmZXkSQk50",
+  authDomain: "fibbleapp.firebaseapp.com",
+  projectId: "fibbleapp",
+  storageBucket: "fibbleapp.firebasestorage.app",
+  messagingSenderId: "609219251144",
+  appId: "1:609219251144:web:1998a083c640a272380efd"
+};
+  const COLLECTION = 'license_keys', LS_LICENSE = 'pc_license_v1', SDK = '10.12.2', KEY_RE = /^[A-Z0-9][A-Z0-9_-]{2,63}$/;
+  const msg = $('keyMsg'), btn = $('keyBtn'), input = $('keyInput'); let started = false, fb = null, fails = 0;
+  const setMsg = (t, cls) => { msg.textContent = t || ''; msg.className = cls || ''; };
+  const configured = () => !/PASTE/i.test(FIREBASE_CONFIG.apiKey + FIREBASE_CONFIG.projectId);
+
+  async function readLicense() {   // сначала localStorage, потом запасной IndexedDB
+    const ok = o => o && typeof o.key === 'string' && KEY_RE.test(o.key);
+    try { const o = JSON.parse(localStorage.getItem(LS_LICENSE) || 'null'); if (ok(o)) return o; } catch (e) {}
+    try { const o = await Persist.get('license'); if (ok(o)) return o; } catch (e) {} return null;
+  }
+  async function writeLicense(key) {
+    const rec = { key, t: Date.now() }; let saved = 0;
+    try { localStorage.setItem(LS_LICENSE, JSON.stringify(rec)); saved++; } catch (e) {}
+    try { await Persist.set('license', rec); saved++; } catch (e) {} return saved > 0;
+  }
+  function unlock() {
+    if (started) return; started = true; document.body.classList.remove('locked');
+    startApp().catch(err => { console.error(err); alert('Ошибка запуска: ' + niceErr(err)); });
+  }
+  async function loadFirebase() {   // SDK грузится только тогда, когда нужно проверить ключ
+    if (fb) return fb;
+    if (!configured()) throw { fbCode: 'not-configured' };
+    const [appM, fs] = await Promise.all([import(`https://www.gstatic.com/firebasejs/${SDK}/firebase-app.js`), import(`https://www.gstatic.com/firebasejs/${SDK}/firebase-firestore.js`)]);
+    const app = appM.initializeApp(FIREBASE_CONFIG); return fb = { fs, db: fs.getFirestore(app) };
+  }
+  async function activate(key) {   // ключ существует и used === false → ставим used = true. Одна атомарная транзакция.
+    const { fs, db } = await loadFirebase(); const ref = fs.doc(db, COLLECTION, key);
+    const run = fs.runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      if (!snap.exists()) throw { keyErr: 'NOT_FOUND' };
+      if (snap.data().used !== false) throw { keyErr: 'USED' };
+      tx.update(ref, { used: true, usedAt: fs.serverTimestamp() });
+    });
+    await Promise.race([run, new Promise((_, rej) => setTimeout(() => rej({ keyErr: 'TIMEOUT' }), 15000))]);
+  }
+  function explain(e) {
+    if (e && e.keyErr === 'NOT_FOUND') return 'Такого ключа нет. Проверьте, что ввели его без ошибок.';
+    if (e && e.keyErr === 'USED') return 'Этот ключ уже использован.';
+    if (e && e.keyErr === 'TIMEOUT') return 'Сервер не отвечает. Проверьте интернет и попробуйте ещё раз.';
+    if (e && e.fbCode === 'not-configured') return 'Firebase не настроен: вставьте firebaseConfig в код (см. инструкцию в начале скрипта).';
+    const c = e && e.code; if (c === 'permission-denied') return 'Доступ к базе запрещён. Проверьте правила Firestore (шаг 5 инструкции).';
+    if (c === 'unavailable' || c === 'failed-precondition' || (e && /network|fetch|Failed to load/i.test(e.message || ''))) return 'Нет соединения с сервером. Проверьте интернет.';
+    return 'Не удалось проверить ключ: ' + ((e && (e.message || e.code)) || 'неизвестная ошибка');
+  }
+  $('lockForm').addEventListener('submit', async ev => {
+    ev.preventDefault(); const key = input.value.trim().toUpperCase().replace(/\s+/g, '');
+    if (!KEY_RE.test(key)) { setMsg('Введите ключ в формате PC-XXXX-XXXX-XXXX (латиница, цифры, «-»).', 'err'); return; }
+    btn.disabled = true; btn.textContent = 'Проверяю…'; setMsg('');
+    try {
+      await activate(key);
+      const kept = await writeLicense(key);
+      setMsg(kept ? 'Ключ принят ✓' : 'Ключ принят, но браузер не даёт запомнить доступ. Сохраните ключ: ' + key, kept ? 'ok' : 'err');
+      setTimeout(unlock, kept ? 350 : 4000);
+    } catch (e) {
+      console.warn('activation failed', e); setMsg(explain(e), 'err'); fails++; btn.textContent = 'Войти';
+      if (fails >= 5) { let s = 30; btn.disabled = true; setMsg('Слишком много неверных попыток. Подождите 30 секунд.', 'err'); const tm = setInterval(() => { btn.textContent = 'Подождите ' + (--s) + ' с'; if (s <= 0) { clearInterval(tm); fails = 0; btn.disabled = false; btn.textContent = 'Войти'; setMsg(''); } }, 1000); }
+      else btn.disabled = false;
+      return;
+    }
+    btn.textContent = 'Войти';
+  });
+  (async () => { const lic = await readLicense(); if (lic) unlock(); else setTimeout(() => input.focus(), 100); })();
+})();
+
+/* ================================== САМО ПРИЛОЖЕНИЕ ================================== */
+async function startApp() {
+const GAP_T = 2.7, EASE = .5, END_HOLD = 3;   // seconds per card at 1x · scroll ease-in · hold after last card
+let HOLD1 = 3;                                                      // first card stays alone this long (editable)
+
+// ---------- sample pictures drawn with emoji ----------
+function emojiPic(e, c1, c2) {
+  const c = document.createElement('canvas'); c.width = c.height = 480; const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 480, 480); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillRect(0, 0, 480, 480);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = '300px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; g.fillText(e, 240, 262);
+  return c.toDataURL('image/jpeg', 0.85);
+}
+const sample = () => [
+  { t: 'Mouse', p: 1, d: 'Tiny, quick and always hungry.', i: emojiPic('🐭', '#3b6ea5', '#14213d') },
+  { t: 'Cat', p: 8, d: 'Silent hunter with sharp claws.', i: emojiPic('🐱', '#7b4fa3', '#2a1744') },
+  { t: 'Dog', p: 25, d: 'Loyal fighter with a strong bite.', i: emojiPic('🐶', '#a3704f', '#44281a') },
+  { t: 'Wolf', p: 70, d: 'Pack hunter. Never fights alone.', i: emojiPic('🐺', '#4f7ea3', '#1a3044') },
+  { t: 'Tiger', p: 180, d: 'Apex predator of the jungle.', i: emojiPic('🐯', '#d9822b', '#5a2a05') },
+  { t: 'Elephant', p: 600, d: 'The strongest land animal alive.', i: emojiPic('🐘', '#6b7a8f', '#222a38') },
+  { t: 'T-Rex', p: 2500, d: 'King of the dinosaurs.', i: emojiPic('🦖', '#3f9a5b', '#0f3a1f') },
+  { t: 'Dragon', p: 99999, d: 'Breathes fire. Nothing can stop it.', i: emojiPic('🐉', '#c4263a', '#3a0a12') },
+];
+const THEMES = {
+  'Красный (классика)': ['#ff3b47', '#c4121e', '#e3202c', '#2a2a30', '#0d0d10', '#2a2a2e', '#1d1d21'],
+  'Неон-синий': ['#35c8ff', '#0a63d6', '#1b8cff', '#16264a', '#050a1c', '#1a2340', '#0e1428'],
+  'Золото': ['#ffd24a', '#c27d00', '#e0a000', '#3a2d12', '#0e0a04', '#2e2616', '#1a150b'],
+  'Токсик-зелёный': ['#5dff7a', '#0f9a3a', '#25c84f', '#0f3a1f', '#040f07', '#16301f', '#0c1c12'],
+  'Фиолетовый': ['#c26bff', '#6a1fc2', '#9a3cf0', '#2c1650', '#0a0414', '#271a40', '#150d26'],
+};
+
+// ---------- загрузка сохранённых данных (карточки + настройки) ----------
+const { state: saved, error: loadErr } = await loadSaved();
+const S0 = (saved && saved.settings) || {};
+let label = 'POWER', themeName = 'Красный (классика)', VERT = innerHeight > innerWidth && innerWidth <= 820;
+if (typeof S0.label === 'string' && S0.label) label = S0.label;
+if (S0.theme) themeName = S0.theme;
+if (typeof S0.vert === 'boolean') VERT = S0.vert;
+if (S0.hold >= .5) HOLD1 = S0.hold;
+if (!THEMES[themeName]) themeName = 'Красный (классика)';
+let cards = saved && Array.isArray(saved.cards) && saved.cards.length ? saved.cards : sample();
+$('optRot').checked = !!S0.rot; $('optCounter').checked = S0.counter !== false; $('optSound').checked = S0.sound !== false; $('counter').classList.toggle('off', !$('optCounter').checked);
+
+// ---------- сохранение: автоматически (через 0.9 с после правки) + кнопка «Сохранить» + при сворачивании/закрытии ----------
+let dirty = false, saveT = null, ver = 0, allowOverwrite = false;
+const stat = $('saveStat'), setStat = (cls, t) => { stat.className = cls; stat.textContent = t; };
+const snapshot = () => ({ v: 2, savedAt: Date.now(), cards, settings: { label, theme: themeName, vert: VERT, hold: HOLD1, counter: $('optCounter').checked, sound: $('optSound').checked, rot: $('optRot').checked } });
+function save() {   // вызывается после любой правки
+  if (loadErr && !allowOverwrite) return; ver++; dirty = true; setStat('dirty', '● Есть несохранённые изменения…'); clearTimeout(saveT); saveT = setTimeout(() => saveNow(false), 900);
+}
+async function saveNow(manual) {
+  clearTimeout(saveT);
+  if (loadErr && !allowOverwrite) { if (!manual) return; if (!confirm('Сохранённые данные не удалось прочитать. Перезаписать их текущими?')) return; allowOverwrite = true; }
+  const my = ver; setStat('', 'Сохраняю…');
+  try { await saveState(snapshot()); if (ver === my) dirty = false; setStat('ok', '✓ Сохранено в ' + new Date().toLocaleTimeString('ru-RU')); try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {} }
+  catch (e) { console.error(e); setStat('err', '⚠ Не сохранилось: ' + niceErr(e)); }
+}
+if (loadErr) setStat('err', '⚠ Не удалось прочитать сохранённые данные (' + niceErr(loadErr) + '). Автосохранение выключено.'); else setStat(saved ? 'ok' : '', saved ? '✓ Данные загружены' : 'Новый проект');
+$('saveBtn').onclick = () => saveNow(true);
+addEventListener('visibilitychange', () => { if (document.hidden && dirty) saveNow(false); });
+addEventListener('pagehide', () => { if (dirty) saveNow(false); });
+addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') { e.preventDefault(); saveNow(true); } });
+
+// ---------- stage / timeline ----------
+const belt = $('belt'), stage = $('stage'), frame = $('frame'), view = $('view');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = n => Math.round(n).toLocaleString('en-US');
+function applyTheme() { ['--a1','--a2','--a3','--bg1','--bg2','--bot','--bot2'].forEach((k, i) => stage.style.setProperty(k, THEMES[themeName][i])); }
+/* scroll axis: x (horizontal) or y (Shorts). LEN = visible length along that axis, CS = card size along it */
+let LEN = 1920, CS = 388, F = 5, TR = [], TCAM0 = 0, TEND = 1, VCAM = 144;
+function plan() {
+  const n = cards.length; CS = VERT ? 640 : 388; F = Math.max(1, Math.min(n, Math.floor((LEN + 20) / CS))); VCAM = CS / GAP_T;
+  TR = cards.map((_, i) => i === 0 ? 0 : HOLD1 + (i - 1) * GAP_T); TCAM0 = TR[F - 1] - EASE / 2; TEND = TR[n - 1] + END_HOLD;
+}
+const maxCam = () => Math.max(0, cards.length * CS - LEN);
+function camAt(p) { const t = p - TCAM0; if (t <= 0) return 0; const g = t < EASE ? t * t / (2 * EASE) : t - EASE / 2; return Math.min(maxCam(), VCAM * g); }
+function buildBelt() {
+  stage.classList.toggle('vert', VERT); document.body.classList.toggle('vert-mode', VERT); plan();
+  belt.innerHTML = cards.map(c => `<div class="card"><div class="top"><div class="hex"><b><small>${esc(label)}</small>${esc(fmt(c.p))}</b></div></div><div class="name">${esc(c.t || '—')}</div><div class="bottom"><div class="desc">${esc(c.d || '')}</div><div class="pic" style="${c.i ? `background-image:url('${c.i}')` : ''}"></div></div></div>`).join('');
+  if (VERT) { belt.style.height = cards.length * CS + 'px'; belt.style.width = '100%'; } else { belt.style.width = cards.length * CS + 'px'; belt.style.height = '100%'; }
+  $('clabel').textContent = label; applyTheme(); fitText(); if (pt < 0) showAll(); else seek(pt);
+}
+function fitText() { // shrink long names / descriptions so they always fit
+  belt.querySelectorAll('.name').forEach(el => { let fs = VERT ? 64 : 56; el.style.fontSize = fs + 'px'; while (el.scrollHeight > el.clientHeight + 2 && fs > 22) { fs -= 2; el.style.fontSize = fs + 'px'; } });
+  belt.querySelectorAll('.desc').forEach(el => { let fs = VERT ? 46 : 42; el.style.fontSize = fs + 'px'; while (el.scrollHeight > el.clientHeight + 2 && fs > 24) { fs -= 2; el.style.fontSize = fs + 'px'; } });
+}
+/* playback state: pt = playhead seconds (1x). pt < 0 means "not started": all cards shown for editing */
+let pt = -1, camX = 0, playing = false, speedMul = 1, lastTs = 0, nextSp = 0, cv = 0, cFrom = 0, cTo = 0, cStart = 0;
+const els = () => belt.children;
+function setCounter(v, instant) { cFrom = cv; cTo = v; cStart = performance.now(); if (instant) cv = v; }
+function showAll() { pt = -1; nextSp = 0; camX = 0; for (const e of els()) e.classList.remove('pre', 'in'); setCounter(cards[Math.min(F, cards.length) - 1].p, true); render(); }
+function seek(p) { // jump to a moment without animations
+  pt = p; let n = 0; for (let i = 0; i < cards.length; i++) { const e = els()[i]; if (!e) continue; e.classList.toggle('pre', TR[i] > p); e.classList.remove('in'); if (TR[i] <= p) n = i + 1; }
+  nextSp = n; camX = camAt(Math.max(0, p)); setCounter(n ? cards[n - 1].p : 0, true); render();
+}
+function spawn(i) {
+  const e = els()[i]; if (!e) return; e.classList.remove('pre', 'in'); void e.offsetWidth; e.classList.add('in'); tick(i); setCounter(cards[i].p);
+}
+function render() {
+  belt.style.transform = VERT ? `translate3d(0,${-camX}px,0)` : `translate3d(${-camX}px,0,0)`;
+  const k = Math.min(1, (performance.now() - cStart) / 900), e = 1 - Math.pow(1 - k, 3); cv = cFrom + (cTo - cFrom) * e; $('cnum').textContent = fmt(cv);
+  if (document.activeElement !== $('scrub')) $('scrub').value = pt < 0 ? 0 : Math.round(Math.min(1, pt / TEND) * 1000);
+}
+
+// ---------- scaling: stage always fills the whole screen while recording ----------
+function setStage(sw, sh, k, rot) { stage.style.width = sw + 'px'; stage.style.height = sh + 'px'; stage.style.transform = `scale(${k})`; frame.style.width = sw * k + 'px'; frame.style.height = sh * k + 'px'; frame.style.transform = rot ? 'rotate(90deg)' : 'none'; }
+function fit() {
+  const clean = document.body.classList.contains('clean'), rot = clean && !VERT && $('optRot').checked, pad = clean ? 0 : (innerWidth <= 820 ? 16 : 28), vw = view.clientWidth - pad, vh = view.clientHeight - pad; if (vw < 10 || vh < 10) return;
+  const old = LEN; let k;
+  if (!clean) { LEN = 1920; const sw = VERT ? 1080 : 1920, sh = VERT ? 1920 : 1080; k = Math.max(.05, Math.min(vw / sw, vh / sh)); setStage(sw, sh, k, false); }
+  else if (VERT) { k = vw / 1080; LEN = Math.max(1000, vh / k); setStage(1080, LEN, k, false); }
+  else if (rot) { k = vw / 1080; LEN = Math.max(1000, vh / k); setStage(LEN, 1080, k, true); }
+  else { k = vh / 1080; LEN = Math.max(1000, vw / k); setStage(LEN, 1080, k, false); }
+  if (Math.abs(old - LEN) > 1 && !playing) { plan(); if (pt < 0) showAll(); else seek(pt); }
+}
+new ResizeObserver(fit).observe(view); addEventListener('resize', fit); addEventListener('orientationchange', () => setTimeout(fit, 200));
+
+// ---------- audio ----------
+let ac = null, nbuf = null;
+function unlock() { try { if (!ac) { ac = new (window.AudioContext || window.webkitAudioContext)(); nbuf = ac.createBuffer(1, ac.sampleRate * .5, ac.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } if (ac.state === 'suspended') ac.resume(); } catch (e) {} }
+function tick(i) {
+  if (!ac || !$('optSound').checked) return;
+  const n = cards.length, p = n > 1 ? i / (n - 1) : 0, f = 330 * Math.pow(2, Math.round(p * 12) / 12), t = ac.currentTime;
+  const o = ac.createOscillator(), g = ac.createGain(), o2 = ac.createOscillator();
+  o.type = 'triangle'; o.frequency.value = f; o2.type = 'sine'; o2.frequency.value = f * 2;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+  o.connect(g); o2.connect(g); g.connect(ac.destination); o.start(t); o2.start(t); o.stop(t + 0.6); o2.stop(t + 0.6);
+  const k = ac.createOscillator(), kg = ac.createGain(); k.frequency.setValueAtTime(170, t); k.frequency.exponentialRampToValueAtTime(45, t + 0.14); kg.gain.setValueAtTime(0.4, t); kg.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); k.connect(kg); kg.connect(ac.destination); k.start(t); k.stop(t + 0.24);
+  const s = ac.createBufferSource(), bp = ac.createBiquadFilter(), sg = ac.createGain(); s.buffer = nbuf; bp.type = 'bandpass'; bp.Q.value = .8; bp.frequency.setValueAtTime(500, t); bp.frequency.exponentialRampToValueAtTime(3500, t + .3); sg.gain.setValueAtTime(0.0001, t); sg.gain.exponentialRampToValueAtTime(.16, t + .08); sg.gain.exponentialRampToValueAtTime(.0001, t + .32); s.connect(bp); bp.connect(sg); sg.connect(ac.destination); s.start(t); s.stop(t + .34);
+}
+
+// ---------- playback ----------
+let endTimer = null, wake = null;
+function loop(ts) {
+  requestAnimationFrame(loop); const dt = Math.min(0.05, (ts - lastTs) / 1000 || 0); lastTs = ts;
+  if (playing) {
+    pt += dt * speedMul; while (nextSp < cards.length && pt >= TR[nextSp]) spawn(nextSp++);
+    if (pt >= TEND) { pt = TEND; playing = false; $('play').textContent = '↻ REPLAY'; clearTimeout(endTimer); endTimer = setTimeout(() => { if (!playing) setClean(false); }, 3500); }
+    camX = camAt(pt);
+  }
+  render();
+}
+function showHint(t) { const h = $('hint'); h.textContent = t; h.classList.add('show'); setTimeout(() => h.classList.remove('show'), 3200); }
+function setClean(on) {
+  if (document.body.classList.contains('clean') === on) return; document.body.classList.toggle('clean', on); fit(); setTimeout(fit, 80);
+  if (on) { scrollTo(0, 0); try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(w => wake = w).catch(() => {}); } catch (_) {} }
+  else { try { wake && wake.release(); wake = null; } catch (_) {} }
+}
+function play() {
+  unlock(); clearTimeout(endTimer);
+  if (playing) { playing = false; $('play').textContent = '▶ PLAY'; setClean(false); return; }
+  setClean(true); fit(); plan();
+  if (pt < 0 || pt >= TEND - .01) { seek(-.001); pt = 0; nextSp = 0; }   // fresh start: everything hidden, card #1 pops in
+  playing = true; $('play').textContent = '❚❚ PAUSE';
+  if (!VERT && innerWidth < innerHeight && innerWidth <= 820 && !$('optRot').checked) showHint('Для вертикального экрана включи формат Shorts 9:16');
+}
+$('play').onclick = play;
+$('right').addEventListener('pointerup', e => { if (document.body.classList.contains('clean')) { e.preventDefault(); if (playing) play(); else { clearTimeout(endTimer); setClean(false); } } });
+$('optRot').onchange = () => { fit(); save(); };
+addEventListener('keydown', e => { if (e.code === 'Space' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); play(); } });
+$('speed').oninput = e => { speedMul = +e.target.value; $('speedOut').textContent = speedMul.toFixed(1) + 'x'; };
+$('scrub').oninput = e => { plan(); seek(+e.target.value / 1000 * TEND); };
+$('label').oninput = e => { label = e.target.value || ' '; save(); buildBelt(); };
+$('theme').innerHTML = Object.keys(THEMES).map(k => `<option>${k}</option>`).join(''); $('theme').value = themeName;
+$('theme').onchange = e => { themeName = e.target.value; save(); applyTheme(); };
+$('label').value = label === ' ' ? '' : label; $('hold').value = HOLD1;
+$('hold').onchange = e => { HOLD1 = Math.min(10, Math.max(.5, +e.target.value || 3)); e.target.value = HOLD1; save(); plan(); };
+$('fmt').value = VERT ? 'v' : 'h'; $('optRot').disabled = VERT;
+$('fmt').onchange = e => { VERT = e.target.value === 'v'; $('optRot').disabled = VERT; playing = false; $('play').textContent = '▶ PLAY'; pt = -1; save(); buildBelt(); fit(); };
+$('optCounter').onchange = e => { $('counter').classList.toggle('off', !e.target.checked); save(); };
+$('optSound').onchange = () => save();
+
+// fullscreen + auto-hide controls (desktop)
+const right = $('right'); let idleT = null;
+$('full').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else (right.requestFullscreen || right.webkitRequestFullscreen).call(right); };
+document.addEventListener('fullscreenchange', () => { setTimeout(fit, 50); right.classList.remove('idle'); });
+right.addEventListener('mousemove', () => { right.classList.remove('idle'); clearTimeout(idleT); if (document.fullscreenElement) idleT = setTimeout(() => right.classList.add('idle'), 2200); });
+
+// ---------- editor list ----------
+const list = $('list'); let dragI = -1;
+function readFile(file, cb) {
+  const r = new FileReader(); r.onload = () => { const im = new Image(); im.onload = () => { const m = 900, k = Math.min(1, m / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); cb(c.toDataURL('image/jpeg', 0.86)); }; im.src = r.result; }; r.readAsDataURL(file);
+}
+function renderList() {
+  list.innerHTML = '';
+  cards.forEach((c, i) => {
+    const el = document.createElement('div'); el.className = 'item';
+    el.innerHTML = `<div class="row"><div class="num" draggable="true" title="Перетащи, чтобы поменять порядок">${i + 1}</div><input type="text" class="t" placeholder="Заголовок" value="${esc(c.t)}"><input type="number" class="p" min="0" step="any" value="${c.p}" title="Power"></div>
+      <textarea class="d" placeholder="Описание">${esc(c.d)}</textarea>
+      <div class="row"><div class="thumb" style="${c.i ? `background-image:url('${c.i}')` : ''}" title="Загрузить фото"></div><input type="file" accept="image/*" hidden>
+      <button class="btn mini up">↑</button><button class="btn mini dn">↓</button><button class="btn mini dup" title="Дублировать">⧉</button><span class="sp"></span><button class="btn mini del" title="Удалить">✕</button></div>`;
+    const file = el.querySelector('input[type=file]');
+    el.querySelector('.t').oninput = e => { c.t = e.target.value; buildBelt(); save(); };
+    el.querySelector('.p').oninput = e => { c.p = Math.max(0, +e.target.value || 0); buildBelt(); save(); };
+    el.querySelector('.d').oninput = e => { c.d = e.target.value; buildBelt(); save(); };
+    el.querySelector('.thumb').onclick = () => file.click();
+    file.onchange = () => { if (file.files[0]) readFile(file.files[0], url => { c.i = url; buildBelt(); renderList(); save(); }); };
+    el.querySelector('.up').onclick = () => move(i, i - 1); el.querySelector('.dn').onclick = () => move(i, i + 1);
+    el.querySelector('.dup').onclick = () => { cards.splice(i + 1, 0, { ...c }); refresh(); };
+    el.querySelector('.del').onclick = () => { if (cards.length > 1) { cards.splice(i, 1); refresh(); } else alert('Нужна хотя бы одна карточка'); };
+    const h = el.querySelector('.num');
+    h.ondragstart = e => { dragI = i; el.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', i); e.dataTransfer.setDragImage(el, 20, 20); } catch (_) {} };
+    h.ondragend = () => { el.classList.remove('drag'); list.querySelectorAll('.over').forEach(x => x.classList.remove('over')); };
+    el.ondragover = e => { if (dragI >= 0) { e.preventDefault(); el.classList.add('over'); } }; el.ondragleave = () => el.classList.remove('over');
+    el.ondrop = e => { e.preventDefault(); if (dragI >= 0 && dragI !== i) move(dragI, i); dragI = -1; };
+    list.appendChild(el);
+  });
+}
+function move(a, b) { if (b < 0 || b >= cards.length) return; const [x] = cards.splice(a, 1); cards.splice(b, 0, x); refresh(); }
+function refresh(noSave) { playing = false; $('play').textContent = '▶ PLAY'; pt = -1; renderList(); buildBelt(); if (!noSave) save(); }
+$('add').onclick = () => { cards.push({ t: 'New ' + (cards.length + 1), p: cards.length ? Math.round((cards[cards.length - 1].p || 1) * 2.5) : 1, d: 'Description', i: '' }); refresh(); list.scrollTop = list.scrollHeight; };
+$('sortAsc').onclick = () => { cards.sort((a, b) => a.p - b.p); refresh(); };
+$('reset').onclick = () => { if (confirm('Вернуть пример и стереть свои карточки?')) { cards = sample(); refresh(); } };
+
+// ---------- go ----------
+refresh(true); fit(); requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
